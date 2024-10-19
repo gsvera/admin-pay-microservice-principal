@@ -16,11 +16,13 @@ public class UserDTO {
     private String lastName;
     private String email;
     private String password;
+    private String codeCompany;
 
     public UserDTO(User user) {
         this.id = user.getId();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
         this.email = user.getEmail();
+        this.codeCompany = user.getCodeCompany();
     }
 }

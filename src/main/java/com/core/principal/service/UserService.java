@@ -60,17 +60,25 @@ public class UserService {
             if(passwordMatch) {
                 authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDTO.getUsername(), loginRequestDTO.getPassword()));
                 String token = jwtService.GetToken(user);
-                userRepository.updateTokenById(user.getId(), token);
-                UserDTO userDTO = new UserDTO(user);
-                ResponseLoginDTO response = new ResponseLoginDTO();
-                response.setToken(token);
-                response.setDataUser(userDTO);
-                return ResponseDTO.builder().items(response).build();
+                int update = userRepository.updateTokenById(user.getId(), token);
+                if(update == 1) {
+                    UserDTO userDTO = new UserDTO(user);
+                    ResponseLoginDTO response = new ResponseLoginDTO();
+                    response.setToken(token);
+                    response.setDataUser(userDTO);
+                    return ResponseDTO.builder().items(response).build();
+                }
+                return ResponseDTO.builder().error(true).message("No se pudo cerrar la sesion").build();
             }
         }
         return ResponseDTO.builder().error(true).message("Error de contraseña").build();
     }
     private Optional<User> _FindUserDuplicateByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public ResponseDTO _Logout(String token) {
+        userRepository.updateToken(token);
+        return ResponseDTO.builder().error(false).build();
     }
 }

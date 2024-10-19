@@ -24,6 +24,8 @@ public class User implements UserDetails {
     private String lastName;
     private String password;
     private String token;
+    @Column(name = "code_company")
+    private String codeCompany;
 
     public User (UserDTO userDTO) {
         this.id = userDTO.getId();

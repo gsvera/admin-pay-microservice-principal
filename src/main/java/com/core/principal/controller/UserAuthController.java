@@ -1,14 +1,27 @@
 package com.core.principal.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.core.principal.dto.ResponseDTO;
+import com.core.principal.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/auth/user")
 public class UserAuthController {
-    @GetMapping("/user")
-    public String sayHello(){
-        return "Hola perroos";
+    @Autowired
+    private UserService userService;
+    @PostMapping("/logout")
+    public ResponseDTO LogoutUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) {
+        ResponseDTO response = new ResponseDTO();
+        try{
+            System.out.println(token.substring(7));
+            return userService._Logout(token.substring(7));
+        } catch(Exception ex) {
+            response.error = true;
+            System.out.println(ex.getMessage());
+            response.message = "Ocurrio un error, intentelo mas tarde";
+        }
+        return  response;
     }
 }

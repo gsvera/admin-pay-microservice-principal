@@ -10,6 +10,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     @Transactional @Modifying
-    @Query(value = "UPDATE tbl_user u SET u.token = ?1 WHERE u.id = ?2", nativeQuery = true)
-    int updateTokenById(String token, String id);
+    @Query(value = "UPDATE tbl_user u SET u.token = ?2 WHERE u.id = ?1", nativeQuery = true)
+    int updateTokenById(String id, String token);
+
+    @Transactional @Modifying
+    @Query(value = "UPDATE tbl_user u SET u.token = '' WHERE u.token = ?1", nativeQuery = true)
+    int updateToken(String token);
 }
