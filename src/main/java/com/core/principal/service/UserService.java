@@ -1,18 +1,21 @@
 package com.core.principal.service;
 
-import com.core.principal.dto.LoginRequestDTO;
-import com.core.principal.dto.ResponseDTO;
-import com.core.principal.dto.ResponseLoginDTO;
+import com.core.principal.dto.*;
+import com.core.principal.entity.PermissionXProfile;
+import com.core.principal.repository.PermissionXProfileRepository;
 import com.core.principal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.core.principal.dto.UserDTO;
 import com.core.principal.entity.User;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final PermissionXProfileRepository permissionXProfileRepository;
     public ResponseDTO _SaveUser(UserDTO userDTO) {
         Optional<User> user = this._FindUserDuplicateByEmail(userDTO.getEmail());
 
@@ -62,7 +66,10 @@ public class UserService {
                 String token = jwtService.GetToken(user);
                 int update = userRepository.updateTokenById(user.getId(), token);
                 if(update == 1) {
+                    ArrayList<PermissionXProfile> permissions = permissionXProfileRepository.findByIdProfile(user.getIdProfile());
+                    List<PermissionXProfileDTO> listPermission = permissions.stream().map(item -> new PermissionXProfileDTO(item)).collect(Collectors.toList());
                     UserDTO userDTO = new UserDTO(user);
+                    userDTO.listPermissions = listPermission;
                     ResponseLoginDTO response = new ResponseLoginDTO();
                     response.setToken(token);
                     response.setDataUser(userDTO);

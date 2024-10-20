@@ -1,10 +1,14 @@
 package com.core.principal.dto;
 
+import com.core.principal.dto.PermissionXProfileDTO;
 import com.core.principal.entity.User;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,6 +21,8 @@ public class UserDTO {
     private String email;
     private String password;
     private String codeCompany;
+    public int idProfile;
+    public List<PermissionXProfileDTO> listPermissions;
 
     public UserDTO(User user) {
         this.id = user.getId();

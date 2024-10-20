@@ -26,6 +26,8 @@ public class User implements UserDetails {
     private String token;
     @Column(name = "code_company")
     private String codeCompany;
+    @Column(name = "id_profile")
+    private int idProfile;
 
     public User (UserDTO userDTO) {
         this.id = userDTO.getId();
@@ -33,6 +35,7 @@ public class User implements UserDetails {
         this.firstName = userDTO.getFirstName();
         this.lastName = userDTO.getLastName();
         this.password = userDTO.getPassword();
+        this.idProfile = userDTO.getIdProfile();
     }
 
     @Override
