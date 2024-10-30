@@ -1,11 +1,14 @@
 package com.core.principal.entity;
 
 import com.core.principal.dto.ContractDTO;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
 @Data
@@ -17,7 +20,7 @@ public class Contract {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "id_customer")
-    private Long idCustomer;
+    private int idCustomer;
     @Column(name = "id_created_user")
     private String idCreatedUser;
     private String folio;
@@ -36,6 +39,9 @@ public class Contract {
     private double interest;
     @Column(name = "status_contract")
     private int statusContract;
+    @OneToMany(mappedBy = "idContractRelation", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<ContractPay> pays;
 
     public Contract(ContractDTO contractDTO) {
         this.id = contractDTO.getId();

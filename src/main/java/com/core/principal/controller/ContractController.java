@@ -36,6 +36,30 @@ public class ContractController {
         }
         return response;
     }
+    @GetMapping("/get-by-customer-contract")
+    public ResponseDTO GetByCustomerContract(@RequestParam String word) {
+        ResponseDTO response = new ResponseDTO();
+        try{
+            return contractService._GetByCustomerContract(word);
+        } catch(Exception ex) {
+            response.error = true;
+            response.message = "Ocurrio un error, intentelo mas tarde";
+            System.out.println(ex.getMessage());
+        }
+        return response;
+    }
+    @GetMapping("/get-contract-with-pays")
+    public ResponseDTO GetContractWithPays(@RequestParam Long id) {
+        ResponseDTO response = new ResponseDTO();
+        try{
+            return contractService._GetContractWithPays(id);
+        } catch(Exception ex) {
+            response.error = true;
+            response.message = "Ocurrio un error, intentelo mas tarde";
+            System.out.println(ex.getMessage());
+        }
+        return response;
+    }
     @PostMapping("/save")
     public ResponseDTO SaveContract(@RequestBody ContractDTO contractDTO) {
         ResponseDTO response = new ResponseDTO();
