@@ -23,4 +23,15 @@ public class PayController {
         }
         return response;
     }
+    @PostMapping("/delete-pay")
+    public ResponseDTO DeletePay(@RequestParam(name = "id-pay") Long idPay, @RequestParam(name = "id-contract") Long idContract){
+        ResponseDTO response = new ResponseDTO();
+        try{
+            return payService._DeletePay(idPay, idContract);
+        } catch(Exception ex) {
+            response.error = true;
+            response.message = "Ocurrio un error, intentelo mas tarde";
+        }
+        return response;
+    }
 }

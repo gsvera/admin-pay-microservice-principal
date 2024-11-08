@@ -41,7 +41,11 @@ public class Contract {
     private int statusContract;
     @OneToMany(mappedBy = "idContractRelation", cascade = CascadeType.ALL)
     @JsonManagedReference
-    private List<ContractPay> pays;
+    private List<ContractPay> paysAmortization;
+
+    @OneToMany(mappedBy = "idContractXPay", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<Pay> pays;
 
     public Contract(ContractDTO contractDTO) {
         this.id = contractDTO.getId();

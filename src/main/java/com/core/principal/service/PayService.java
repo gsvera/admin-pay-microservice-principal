@@ -2,30 +2,37 @@ package com.core.principal.service;
 
 import com.core.principal.config.AppConfig;
 import com.core.principal.dto.ContractPayDTO;
+import com.core.principal.dto.CustomerNoteDTO;
 import com.core.principal.dto.ResponseDTO;
 import com.core.principal.entity.Contract;
 import com.core.principal.entity.ContractPay;
+import com.core.principal.entity.Pay;
+import com.core.principal.repository.ContractPayRepository;
 import com.core.principal.repository.ContractRepository;
+import com.core.principal.repository.PayContractRepository;
 import com.core.principal.repository.PayRepository;
+import com.core.principal.utils.GeneralUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor
 public class PayService {
+    private final PayContractRepository payContractRepository;
     private final PayRepository payRepository;
     private final ContractRepository contractRepository;
+    private final ContractPayRepository contractPayRepository;
+    private final CustomerNoteService customerNoteService;
     private final AppConfig appConfig;
     public ResponseDTO _SavePay(ContractPayDTO contractPayDTO, boolean force) {
         Contract contract = contractRepository.findByIdContract(Long.valueOf(contractPayDTO.getIdContractDto()));
         if(contract != null) {
             double amountToPay = contractPayDTO.getPayAmount();
-            ArrayList<ContractPay> listPays = payRepository.findByIdContractPaysPending(contractPayDTO.getIdContractDto());
+            ArrayList<ContractPay> listPays = payContractRepository.findByIdContractPaysPending(contractPayDTO.getIdContractDto());
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             DateTimeFormatter formatterDb = DateTimeFormatter.ofPattern("dd-MM-yyyy");
@@ -61,8 +68,19 @@ public class PayService {
                     }
                 }
             }
+            // Guardar el calculo de los pagos realizados a la amortizacion
+            payContractRepository.saveAll(listPayComplete);
 
-            listPayComplete.stream().forEach(itemPay -> payRepository.save(itemPay));
+            String idsPay = listPayComplete.stream().map(itemPay -> itemPay.getId().toString()).collect(Collectors.joining(","));
+
+            // Guardar el registro del pago completo
+            this._SavePay(contractPayDTO, idsPay, contract);
+
+            // Actualizar estatus del contrato
+            this._ValidFinalContract(contract.getId());
+
+            // Agregar nota al cliente por el pago realizado
+            this._SavePayNote(contractPayDTO, contract.getIdCustomer(), contract.getFolio());
 
             return ResponseDTO.builder().items(obj).message("Se guardo con éxito su pago").build();
         }
@@ -78,8 +96,9 @@ public class PayService {
             amountToPay = amountToPay - pendingToPay;
         }
         else if(amountToPay < contractPay.getAgreedPay() && contractPay.getPayAmount() > 0) {
-            payAmount = amountToPay + contractPay.getPayAmount();
-            amountToPay = amountToPay - pendingToPay;
+            double differentPay = (amountToPay <= pendingToPay ? amountToPay : pendingToPay);
+            payAmount = differentPay + contractPay.getPayAmount();
+            amountToPay = amountToPay - differentPay;
         }
         else if(amountToPay > contractPay.getAgreedPay() && contractPay.getPayAmount() == 0) {
             payAmount = contractPay.getAgreedPay();
@@ -89,7 +108,7 @@ public class PayService {
             payAmount = amountToPay;
             amountToPay = 0;
         }
-        contractPay.setStatusPay(payAmount == contractPay.getAgreedPay() ? 1 : 0);
+        contractPay.setStatusPay(payAmount >= contractPay.getAgreedPay() ? 1 : 0);
         contractPay.setCreatedNameUser(contractPayDTO.getCreatedNameUser());
         contractPay.setIdCreatedUser(contractPayDTO.getIdCreatedUser());
         contractPay.setPayDate(contractPayDTO.getPayDate());
@@ -102,6 +121,65 @@ public class PayService {
         return amountToPay;
     }
     public void _SaveAmortizationPays(ContractPayDTO contractPayDTO) {
-        payRepository.save(new ContractPay(contractPayDTO));
+        payContractRepository.save(new ContractPay(contractPayDTO));
+    }
+    public void _SavePay(ContractPayDTO contractPayDTO, String idsPay, Contract contract) {
+        Pay newPayRegister = new Pay(contractPayDTO);
+        newPayRegister.setIdsPayContract(idsPay);
+        newPayRegister.setIdContractXPay(contract);
+        payRepository.save(newPayRegister);
+    }
+
+    public void _SavePayNote(ContractPayDTO contractPayDTO, int idCustomer, String folio) {
+        CustomerNoteDTO newCustomerNoteDto = new CustomerNoteDTO(
+                (long)idCustomer,
+                contractPayDTO.getIdCreatedUser(),
+                contractPayDTO.getCreatedNameUser(),
+                "Se realiza pago por el monto de <i>" + GeneralUtils.convertCurrency(contractPayDTO.getPayAmount()) + "</i> con fecha de <i>" + contractPayDTO.getPayDidDate() + "</i> al contrato <i>" + folio + "</i>. <br><i>*Nota generada por sistema*</i>"
+        );
+        customerNoteService._SaveCustomerNote(newCustomerNoteDto);
+    }
+
+    public void _ValidFinalContract(Long idContract) {
+        List<Pay> listPay = payRepository.findByIdContract(idContract);
+        List<ContractPay> listContractPay = contractPayRepository.findByIdContract(idContract);
+
+        // **********       REFACTORIZAR ESTA FUNCIONA PARA QUE SE VALIDE LOS ESTATUS QUE SE DEBEN APLICAR AL CONTRATO
+
+        double totalPay = listPay.stream().mapToDouble(Pay::getPayAmount).sum();
+        double totalContractPay = listContractPay.stream().mapToDouble(ContractPay::getAgreedPay).sum();
+
+        if(totalPay >= totalContractPay) {
+            contractRepository.updateStatusContract(7,idContract);
+        }
+    }
+
+    public ResponseDTO _DeletePay(Long idPay, Long idContract) {
+        Pay pay = payRepository.findById(idPay).orElseThrow();
+        List<ContractPay> listContractPay = contractPayRepository.findByIdContract(idContract);
+
+        listContractPay.sort(Comparator.comparing(ContractPay::getId).reversed());
+        final double[] amount = {pay.getPayAmount()};
+
+        for(ContractPay contractPay : listContractPay) {
+            double montoPagado = contractPay.getPayAmount();
+            if(amount[0] == 0) {
+                break;
+            }
+            if(contractPay.getPayAmount() != 0) {
+                if(montoPagado < amount[0]) {
+                    contractPay.setPayAmount(0);
+                    amount[0] = amount[0] - montoPagado;
+                } else if (montoPagado > amount[0]) {
+                    contractPay.setPayAmount(montoPagado - amount[0]);
+                    amount[0] = 0;
+                }
+            }
+        }
+
+        payContractRepository.saveAll(listContractPay);
+        payRepository.delete(pay);
+
+        return ResponseDTO.builder().message("Se ha eliminado correctamente el pago").build();
     }
 }

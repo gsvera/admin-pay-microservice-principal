@@ -23,4 +23,10 @@ public class CustomerNoteDTO {
         this.note = customerNote.getNote();
         this.createdAt = customerNote.getCreatedAt();
     }
+    public CustomerNoteDTO(Long idCustomer, String idUser, String nameUserCreated, String note) {
+        this.idCustomer = idCustomer;
+        this.idUser = idUser;
+        this.nameUserCreated = nameUserCreated;
+        this.note = note;
+    }
 }
